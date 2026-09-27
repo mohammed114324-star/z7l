@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محرر كود Lua - رابط Raw مباشر</title>
+    <!-- خطوط وجداول أيقونات -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0e1117;
+            --panel-bg: #161b22;
+            --editor-bg: #1e1e1e;
+            --accent-color: #007acc;
+            --accent-hover: #005999;
+            --text-color: #e6edf3;
+            --border-color: #30363d;
+            --success-color: #2ea043;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Raw View Styling */
+        body.raw-mode {
+            background-color: #0d0d0d;
+            margin: 0;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #d4d4d4;
+            direction: ltr;
+            text-align: left;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #51a0d5;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button.btn-secondary {
+            background-color: #21262d;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        button.btn-secondary:hover {
+            background-color: #30363d;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .editor-container {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: var(--editor-bg);
+            min-height: 450px;
+        }
+
+        .editor-header {
+            background-color: var(--panel-bg);
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            color: #8b949e;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            direction: ltr;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+            background-color: var(--editor-bg);
+            color: #9cdcfe;
+            border: none;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            direction: ltr;
+            text-align: left;
+            tab-size: 4;
+        }
+
+        /* Modal for Output */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 550px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-content h3 {
+            color: #fff;
+        }
+
+        .link-input-group {
+            display: flex;
+            gap: 8px;
+            direction: ltr;
+        }
+
+        .link-input-group input {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: var(--success-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            display: none;
+            animation: fadeIn 0.3s;
+            font-weight: 600;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Application UI -->
+    <header id="mainHeader">
+        <div class="logo">
+            <i class="fa-solid fa-code"></i>
+            <span>مشارك أكواد Lua (Raw Generator)</span>
+        </div>
+        <div class="controls">
+            <button class="btn-secondary" onclick="clearCode()">
+                <i class="fa-solid fa-trash"></i> مسح
+            </button>
+            <button onclick="generateRawLink()">
+                <i class="fa-solid fa-link"></i> إنشاء رابط Raw
+            </button>
+        </div>
+    </header>
+
+    <main id="mainContent">
+        <div class="editor-container">
+            <div class="editor-header">
+                <span>script.lua</span>
+                <span>Lua 5.4</span>
+            </div>
+            <textarea id="luaCode" placeholder="-- أكتب أو ألصق كود Lua هنا..." spellcheck="false"></textarea>
+        </div>
+    </main>
+
+    <!-- Modal for Showing Links -->
+    <div class="modal" id="linkModal">
+        <div class="modal-content">
+            <h3><i class="fa-solid fa-circle-check" style="color: var(--success-color);"></i> تم إنشاء الرابط بنجاح!</h3>
+            <p style="font-size: 0.9rem; color: #8b949e;">يمكنك استخدام رابط Raw المباشر لقراءة الكود مباشرة بواسطة السكربتات:</p>
+
+            <label style="font-size: 0.85rem;">رابط الـ Raw المباشر:</label>
+            <div class="link-input-group">
+                <input type="text" id="rawUrlInput" readonly>
+                <button onclick="copyLink('rawUrlInput')"><i class="fa-solid fa-copy"></i> نسخ</button>
+            </div>
+
+            <div style="text-align: left; margin-top: 10px;">
+                <button class="btn-secondary" onclick="closeModal()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification popup -->
+    <div class="notification" id="notification">تم النسخ إلى الحافظة!</div>
+
+    <script>
+        const luaTextarea = document.getElementById('luaCode');
+
+        // Handle Tab Key in Editor
+        luaTextarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+
+                // Insert 4 spaces
+                this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+            }
+        });
+
+        // Encode string safely to Base64 (Supports UTF-8 / Arabic)
+        function utf8_to_b64(str) {
+            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                return String.fromCharCode('0x' + p1);
+            }));
+        }
+
+        // Decode Base64 safely to UTF-8
+        function b64_to_utf8(str) {
+            return decodeURIComponent(atob(str).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        }
+
+        // Check if current URL contains ?raw=
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rawData = urlParams.get('raw');
+
+            if (rawData !== null) {
+                try {
+                    const decodedCode = b64_to_utf8(rawData);
+                    
+                    // Convert entire body to plain text raw display
+                    document.body.classList.add('raw-mode');
+                    document.body.textContent = decodedCode;
+                    
+                    // Stop executing rest of normal UI script
+                    return;
+                } catch (e) {
+                    document.body.textContent = "-- Error decoding Lua script from URL.";
+                    return;
+                }
+            }
+        });
+
+        // Generate Raw Link
+        function generateRawLink() {
+            const code = luaTextarea.value.trim();
+            if (!code) {
+                alert('الرجاء إدخال كود Lua أولاً!');
+                return;
+            }
+
+            try {
+                const encodedCode = utf8_to_b64(code);
+                const baseUrl = window.location.origin + window.location.pathname;
+                const rawUrl = baseUrl + '?raw=' + encodedCode;
+
+                document.getElementById('rawUrlInput').value = rawUrl;
+                document.getElementById('linkModal').style.display = 'flex';
+            } catch (err) {
+                alert('حدث خطأ أثناء معالجة الكود!');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('linkModal').style.display = 'none';
+        }
+
+        function copyLink(inputId) {
+            const input = document.getElementById(inputId);
+            input.select();
+            document.execCommand('copy');
+            showNotification();
+        }
+
+        function showNotification() {
+            const notif = document.getElementById('notification');
+            notif.style.display = 'block';
+            setTimeout(() => {
+                notif.style.display = 'none';
+            }, 2500);
+        }
+
+        function clearCode() {
+            if (confirm('هل أنت تأكد من مسح النص؟')) {
+                luaTextarea.value = '';
+            }
+        }
+    </script>
+</body>
+</html>
