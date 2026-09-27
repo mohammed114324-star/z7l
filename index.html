@@ -55,6 +55,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .logo {
@@ -69,6 +71,7 @@
         .controls {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         button {
@@ -208,6 +211,7 @@
             display: none;
             animation: fadeIn 0.3s;
             font-weight: 600;
+            z-index: 2000;
         }
 
         @keyframes fadeIn {
@@ -227,6 +231,12 @@
         <div class="controls">
             <button class="btn-secondary" onclick="clearCode()">
                 <i class="fa-solid fa-trash"></i> مسح
+            </button>
+            <button class="btn-secondary" onclick="saveToLocalStorage(true)">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ
+            </button>
+            <button class="btn-secondary" onclick="downloadLuaFile()">
+                <i class="fa-solid fa-download"></i> تحميل كملف
             </button>
             <button onclick="generateRawLink()">
                 <i class="fa-solid fa-link"></i> إنشاء رابط Raw
@@ -263,7 +273,7 @@
     </div>
 
     <!-- Notification popup -->
-    <div class="notification" id="notification">تم النسخ إلى الحافظة!</div>
+    <div class="notification" id="notification">تم الحفظ بنجاح!</div>
 
     <script>
         const luaTextarea = document.getElementById('luaCode');
@@ -281,21 +291,50 @@
             }
         });
 
-        // Encode string safely to Base64 (Supports UTF-8 / Arabic)
+        // Auto Save to LocalStorage on typing
+        luaTextarea.addEventListener('input', function() {
+            saveToLocalStorage(false);
+        });
+
+        // Save Code to LocalStorage
+        function saveToLocalStorage(showNotif = false) {
+            localStorage.setItem('saved_lua_code', luaTextarea.value);
+            if (showNotif) {
+                showNotification('تم حفظ الكود في المتصفح!');
+            }
+        }
+
+        // Download Code as .lua File
+        function downloadLuaFile() {
+            const code = luaTextarea.value;
+            if (!code.trim()) {
+                alert('الرجاء إدخال كود أولاً لتحميله!');
+                return;
+            }
+            const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'script.lua';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showNotification('تم تنزيل الملف بنجاح!');
+        }
+
+        // Safe Base64 Encoding (Supports UTF-8 / Arabic)
         function utf8_to_b64(str) {
             return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
                 return String.fromCharCode('0x' + p1);
             }));
         }
 
-        // Decode Base64 safely to UTF-8
+        // Safe Base64 Decoding
         function b64_to_utf8(str) {
             return decodeURIComponent(atob(str).split('').map(function(c) {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             }).join(''));
         }
 
-        // Check if current URL contains ?raw=
+        // Check URL Parameters or Restore Saved Code
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const rawData = urlParams.get('raw');
@@ -304,16 +343,19 @@
                 try {
                     const decodedCode = b64_to_utf8(rawData);
                     
-                    // Convert entire body to plain text raw display
                     document.body.classList.add('raw-mode');
                     document.body.textContent = decodedCode;
-                    
-                    // Stop executing rest of normal UI script
                     return;
                 } catch (e) {
                     document.body.textContent = "-- Error decoding Lua script from URL.";
                     return;
                 }
+            }
+
+            // Restore from LocalStorage if not in raw mode
+            const savedCode = localStorage.getItem('saved_lua_code');
+            if (savedCode) {
+                luaTextarea.value = savedCode;
             }
         });
 
@@ -345,11 +387,12 @@
             const input = document.getElementById(inputId);
             input.select();
             document.execCommand('copy');
-            showNotification();
+            showNotification('تم النسخ إلى الحافظة!');
         }
 
-        function showNotification() {
+        function showNotification(msg = 'تم العملية بنجاح!') {
             const notif = document.getElementById('notification');
+            notif.textContent = msg;
             notif.style.display = 'block';
             setTimeout(() => {
                 notif.style.display = 'none';
@@ -359,6 +402,8 @@
         function clearCode() {
             if (confirm('هل أنت تأكد من مسح النص؟')) {
                 luaTextarea.value = '';
+                localStorage.removeItem('saved_lua_code');
+                showNotification('تم مسح النص!');
             }
         }
     </script>
